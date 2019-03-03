@@ -1,5 +1,5 @@
 
-LIST P=PIC18F4321	F=INHX32
+    LIST P=PIC18F4321	F=INHX32
 #include <p18f4321.inc>
 
 
@@ -12,10 +12,10 @@ LIST P=PIC18F4321	F=INHX32
     
 ; Configuracio General
 
-CONFIG  OSC		= HSPLL			; L'oscil.lador
-CONFIG  PBADEN		= DIG			; Volem que el PORTB sigui DIGital
-CONFIG  WDT		= OFF			; Desactivem el Watch Dog Timer
-CONFIG  LVP		= OFF
+    CONFIG  OSC		= HSPLL			; L'oscil.lador
+    CONFIG  PBADEN		= DIG			; Volem que el PORTB sigui DIGital
+    CONFIG  WDT		= OFF			; Desactivem el Watch Dog Timer
+    CONFIG  LVP		= OFF
 
     
 ; Variables
@@ -35,12 +35,12 @@ TaulaRGB	EQU 0xB
 
 ; Configuracio Interrupcions
 
-ORG	0x0000
-GOTO    MAIN
-ORG	0x0008    
-GOTO    HIGH_RSI 
-ORG	0x0018
-RETFIE  FAST		
+    ORG	0x0000
+    GOTO    MAIN
+    ORG	0x0008    
+    GOTO    HIGH_RSI 
+    ORG	0x0018
+    RETFIE  FAST		
 		
 
 		
@@ -90,7 +90,7 @@ INIT_VARS
     CLRF	Count,0
     SETF	Graba,0
 
-RETURN
+    RETURN
     
    
 INIT_PORTS  
@@ -122,6 +122,8 @@ INIT_PORTS
     BCF		LATA,RA5,0			; R/!WRAM
     BCF		LATE,RE0,0			; NextPos
     BSF		LATE,RE1,0			; NRPos fem reset incial
+    NOP
+    NOP
     BCF		LATE,RE1,0			; NRPos
     CLRF	LATC,0				; LEDRGB(0 a 2)	pwmServo0(3), pwmServo1(4), LED0(5)
     
@@ -136,20 +138,20 @@ INIT_PORTS
     ; Pull-Ups (Nose si cal)
     BCF		INTCON2, RBPU,0
     
-RETURN
+    RETURN
     
 INIT_RSI
     BCF		RCON,IPEN,0			; Desactivem les prioritats
     MOVLW	b'11101000'
     MOVWF	INTCON,0			; Habilitem totes les interrupcions de Timer0 i PortChange
-RETURN    
+    RETURN    
     
     
 INIT_TIMER
     MOVLW	b'10010001'			; Configurem el TIMER0
     MOVWF	T0CON,0				; Timer0 Controller
     CALL	CARREGA_TIMER			; Carreguem el TIMER0
-RETURN    
+    RETURN    
     
     
     
@@ -163,7 +165,7 @@ CARREGA_TIMER
     MOVWF	TMR0H,0
     MOVLW	LOW(.15525)	
     MOVWF	TMR0L,0
-RETURN
+    RETURN
     
     
 DeuSeg
@@ -171,7 +173,7 @@ DeuSeg
     CLRF	Vegades,0
     CLRF	TRISD,0				; Posem BDRam com a sortida per poder-hi escriure
     BCF		LATC,RC5,0			; Apaguem LED0 per indicar que no estem grabant
-RETURN    
+    RETURN    
     
     
 RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritura i !CSRam a 1 (desactivat)
@@ -184,7 +186,7 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     MOVLW	b'00000001';Per provar poso an0 MOVLW	b'00001001'			; ADCON0 al canal AN2 i ADON activat------------------------------------------------------------------------------------
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
-    ESPEREM2					; Esperem a que acabi de convertir el valor
+	ESPEREM2				; Esperem a que acabi de convertir el valor
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM2
     
@@ -192,9 +194,11 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     
     BCF		LATA,RA5,0			; R/!W RAM
     BCF		LATA,RA4,0			; Activem !CSRam
-    BSF		LATA,RA4,0			; Desactivem !CSRam
+    
     
     BSF		LATE,RE0,0			; NextPos
+    NOP
+    NOP
     BCF		LATE,RE0,0			; NextPos
     
     
@@ -202,7 +206,7 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     MOVLW	b'00000101';Per provar poso an1 MOVLW	b'00001101'			; ADCON0 al canal AN3 i ADON activat-------------------------------------------------------------------------------------
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
-    ESPEREM3					; Esperem a que acabi de convertir el valor
+	ESPEREM3				; Esperem a que acabi de convertir el valor
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM3
     
@@ -210,12 +214,14 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     
     BCF		LATA,RA5,0			; R/!W RAM
     BCF		LATA,RA4,0			; Activem !CSRam
-    BSF		LATA,RA4,0			; Desactivem !CSRam
+    
     
     BSF		LATE,RE0,0			; NextPos
+    NOP
+    NOP
     BCF		LATE,RE0,0			; NextPos
 
-RETURN
+    RETURN
 
 
 PLAY    
@@ -224,18 +230,26 @@ PLAY
     SETF	TRISD,0				; Inicialment posem BDRam com a entrada per poder llegir
     BSF		LATA,RA5,0			; R/!WRAM
     BCF		LATA,RA4,0			; !CSRam
-
+    NOP
+    NOP
+    
     ; Llegim valor i el passem a PWMSERVO0
     MOVFF	PORTD,PWMSERVO0
     BSF		LATE,RE0,0			; Activem NextPos
+    NOP
+    NOP
     BCF		LATE,RE0,0			; Desactivem NextPos
+    NOP
+    NOP
     
     ; Llegim valor i el passem a PWMSERVO1
     MOVFF	PORTD,PWMSERVO1
     BSF		LATE,RE0,0			; Activem NextPos
+    NOP
+    NOP
     BCF		LATE,RE0,0			; Desactivem NextPos
 
-RETURN
+    RETURN
     
     
 NoPWM
@@ -244,22 +258,26 @@ NoPWM
     BSF		TRISC,RC6,0			; pwmServo0
     BSF		TRISC,RC7,0			; pwmServo1
     BSF		LATE,RE1,0			; Activem NRPos
+    NOP
+    NOP
     BCF		LATE,RE1,0			; Activem NRPos
-RETURN
+    RETURN
 
 
 ResetPos
     CLRF	Vegades,0			; Netejo variable de nombre de cops contats per arribar a 10s
     SETF	Graba,0				; Poso a 1, perque grabi al entrar al mode
     BSF		LATE,RE1,0			; Activem NRPos
+    NOP
+    NOP
     BCF		LATE,RE1,0			; Activem NRPos
-RETURN
+    RETURN
 
 
 ENVIA_PC
 
 
-RETURN    
+    RETURN    
     
     
     
@@ -270,7 +288,7 @@ HIGH_RSI
     CALL	TIMER_RSI			; Interrupcio per TIMER0
     BTFSC	INTCON,RBIF,0
     CALL	MODE_RSI			; Interrupcio per canvi de mode als switch
-RETFIE FAST
+    RETFIE FAST
     
     
 TIMER_RSI
@@ -288,7 +306,7 @@ TIMER_RSI
     
     CLRF	Valor,0				; Netejem valor, que indica el temps que esta a 1 cada pwm a dins el LOOP del main
     
-RETURN
+    RETURN
 
     
 MODE_RSI
@@ -311,7 +329,7 @@ MODE_RSI
 
     BCF		INTCON,RBIF,0			; Netejem flag de interrupcio
     
-RETURN    
+    RETURN    
     
     
     
@@ -343,7 +361,7 @@ MODE0
     ;CPFSGT	PWMSERVO0,0
     ;MOVWF	PWMSERVO0,0
 
-RETURN
+    RETURN
 
     
 MODE1
@@ -353,7 +371,7 @@ MODE1
     MOVLW	b'00000001'			; ADCON0 al canal AN0 i ADON activat
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
-    ESPEREM					; Esperem a que acabi de convertir el valor
+	ESPEREM					; Esperem a que acabi de convertir el valor
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM
     
@@ -367,7 +385,7 @@ MODE1
     MOVLW	b'00000101'			; ADCON0 al canal AN1 i ADON activat							PROVOCA ERROR EN LA GENERACIO DE PWM, CONVERTEIX MOLT LENT/////////////////////////
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
-    ESPEREM1					; Esperem a que acabi de convertir el valor
+	ESPEREM1					; Esperem a que acabi de convertir el valor
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM1
     
@@ -376,7 +394,7 @@ MODE1
     ;SUBWF	ADRESH,0,0
     ;MOVWF	PWMSERVO1,0
 
-RETURN    
+    RETURN    
     
     
 MODE23
@@ -393,7 +411,7 @@ MODE23
     CPFSLT	Vegades,0			; Si ha arribat a 500 voltes executem DeuSeg
     CALL	DeuSeg				; Canvia el estat de grabar/reproduir, neteja variable vegades
     
-RETURN    
+    RETURN    
     
     
     
@@ -418,10 +436,10 @@ LOOP
     
     
     
-    ESPERA1					; Bucle que fa 100 voltes i despr?s incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
+	ESPERA1					; Bucle que fa 100 voltes i despr?s incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
     MOVLW	.217				; CAL AJUSTAR PERQUE FUNCIONI DE 0 A 255, EN COMPTES DE 0 180
     MOVWF	Count,0 
-    INCREMENTA              
+	INCREMENTA              
     INCF	Count,1 
     BTFSS	STATUS,C,0  
     GOTO	INCREMENTA
@@ -431,14 +449,14 @@ LOOP
     BCF		LATC,RC3,0
     CPFSGT	PWMSERVO1,0
     BCF		LATC,RC4,0	
-GOTO LOOP
+    GOTO LOOP
 
 	
 
 Joystickeame
     BTFSC	Graba,0,0			; Si esta reproduint, la funcio joystickeame tampoc funcionara, desactiva joystick
     CALL	MODE1				; Llegir valors joystick i posar-los directament al PWMSERVOX (fer servir joystick)
-GOTO ESPERA1
+    GOTO ESPERA1
 
 	
 	
@@ -455,48 +473,48 @@ GOTO ESPERA1
 INIT_OSC
     MOVLW b'01100111'				; Posem el INTIO a 4 MHZ, tInst = 1us
     MOVWF OSCCON,0
-RETURN     
+    RETURN     
 
 SETRGB_180
     BSF LATC0,0
     BSF LATC1,0
     BSF LATC2,0
-RETURN
+    RETURN
 SETRGB_158
     BSF LATC0,0
     BSF LATC1,0
     BCF LATC2,0
-RETURN
+    RETURN
 SETRGB_135
     BSF LATC0,0
     BCF LATC1,0
     BSF LATC2,0
-RETURN
+    RETURN
 SETRGB_113
     BSF LATC0,0
     BCF LATC1,0
     BCF LATC2,0
-RETURN
+    RETURN
 SETRGB_90
     BCF LATC0,0
     BSF LATC1,0
     BSF LATC2,0
-RETURN
+    RETURN
 SETRGB_68
     BCF LATC0,0
     BSF LATC1,0
     BCF LATC2,0
-RETURN
+    RETURN
 SETRGB_45
     BCF LATC0,0
     BCF LATC1,0
     BSF LATC2,0
-RETURN
+    RETURN
 SETRGB_22
     BCF LATC0,0
     BCF LATC1,0
     BCF LATC2,0
-RETURN
+    RETURN
 
 
 
@@ -526,7 +544,7 @@ RGB0
     CPFSLT Angle0,0
     CALL SETRGB_45
     CALL SETRGB_22
-RETURN
+    RETURN
 
 RGB1
     SETF Canvi,0
@@ -553,10 +571,10 @@ RGB1
     CPFSLT Angle1,0
     CALL SETRGB_45
     CALL SETRGB_22
-RETURN
+    RETURN
     
     
     
     
     
-END
+    END
