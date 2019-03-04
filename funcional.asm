@@ -1,6 +1,6 @@
+LIST P=PIC18F4321 F=INHX32
+    #include <p18f4321.inc>
 
-    LIST P=PIC18F4321	F=INHX32
-#include <p18f4321.inc>
 
 
 ; DUBTES
@@ -13,7 +13,7 @@
 ; Configuracio General
 
     CONFIG  OSC		= HSPLL			; L'oscil.lador
-    CONFIG  PBADEN		= DIG			; Volem que el PORTB sigui DIGital
+    CONFIG  PBADEN	= DIG			; Volem que el PORTB sigui DIGital
     CONFIG  WDT		= OFF			; Desactivem el Watch Dog Timer
     CONFIG  LVP		= OFF
 
@@ -31,7 +31,9 @@ Valor		EQU 0x07			; Var que serveix per comparar amb el Ta1 de cada PWM
 Count		EQU 0x08			; Contador per fer un bucle de 100 al LOOP de main
 Graba		EQU 0x09			; Var que indica si estem grabant o reproduint en el mode 3 o 4
 VarToca		EQU 0xA				; Var que serveix per indicar si cal contar o no per quan cal arribar als 10s
-TaulaRGB	EQU 0xB
+TaulaRGB	EQU 0xB				; Taula de la combinacio de els leds RGB
+TaulaJoystick	EQU 0xC				; Taula de conversio del valor convertit a digital, per ajustar als limits correctes
+	
 
 ; Configuracio Interrupcions
 
@@ -47,15 +49,15 @@ TaulaRGB	EQU 0xB
 		
 ; ------------------------------------------------------------------------ TAULES -------------------------------------------------------------------------------------------------------------------		
 		
-;ORG TaulaRGB		
+   ; ORG TaulaRGB		
 ;Segments del 0, segments del 23
-;DB 0x00, 0x01
+   ; DB 0x00, 0x01
 ;Segments del 46, segments del 69
-;DB 0x02, 0x03
+    ;DB 0x02, 0x03
 ;Segments del 91, segments del 114
-;DB 0x04, 0x05
+    ;DB 0x04, 0x05
 ;Segments del 136, segments del 159
-;DB 0x06, 0x07
+    ;DB 0x06, 0x07
     		
 		
 		
@@ -95,7 +97,6 @@ INIT_VARS
    
 INIT_PORTS  
     
-
     ; Sortides
     BCF		TRISA,RA4,0			; !CSRam
     BCF		TRISA,RA5,0			; R/!WRAM
@@ -130,7 +131,7 @@ INIT_PORTS
     
     ; Iniciem ADCON
     MOVLW	b'00001011'			; Deixem voltatges de referencia de 0V a 5V
-    MOVWF	ADCON1,0			; Posem els ports analògics del AN0 al AN3
+    MOVWF	ADCON1,0			; Posem els ports anal�gics del AN0 al AN3
     MOVLW	b'00001001'			; Justifiquem a la esquerra (ADRESH) i temps i clock a alta velocitat
     MOVWF	ADCON2,0
     
@@ -140,10 +141,12 @@ INIT_PORTS
     
     RETURN
     
+    
 INIT_RSI
     BCF		RCON,IPEN,0			; Desactivem les prioritats
     MOVLW	b'11101000'
     MOVWF	INTCON,0			; Habilitem totes les interrupcions de Timer0 i PortChange
+    
     RETURN    
     
     
@@ -151,6 +154,7 @@ INIT_TIMER
     MOVLW	b'10010001'			; Configurem el TIMER0
     MOVWF	T0CON,0				; Timer0 Controller
     CALL	CARREGA_TIMER			; Carreguem el TIMER0
+    
     RETURN    
     
     
@@ -165,6 +169,7 @@ CARREGA_TIMER
     MOVWF	TMR0H,0
     MOVLW	LOW(.15525)	
     MOVWF	TMR0L,0
+    
     RETURN
     
     
@@ -173,6 +178,12 @@ DeuSeg
     CLRF	Vegades,0
     CLRF	TRISD,0				; Posem BDRam com a sortida per poder-hi escriure
     BCF		LATC,RC5,0			; Apaguem LED0 per indicar que no estem grabant
+    
+    BSF		LATE,RE1,0			; Activem NRPos
+    NOP
+    NOP
+    BCF		LATE,RE1,0			; Activem NRPos
+    
     RETURN    
     
     
@@ -181,7 +192,8 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
 	; Un cop tenim el valor a BDRam, activarem CS per guardar i desactivarem, i despr?s farem un pols de adre?a (NextPos)
 	
     BSF		LATC,RC5,0			; Encenem LED0 per indicar que estem grabant
-    
+    BCF		LATA,RA5,0			; R/!W RAM
+
     ; Servo0
     MOVLW	b'00000001';Per provar poso an0 MOVLW	b'00001001'			; ADCON0 al canal AN2 i ADON activat------------------------------------------------------------------------------------
     MOVWF	ADCON0,0
@@ -190,30 +202,31 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM2
     
-    MOVFF	ADRESH,LATD			; Copiem els 8 bits de més pes a el LATD	
-    
-    BCF		LATA,RA5,0			; R/!W RAM
-    BCF		LATA,RA4,0			; Activem !CSRam
-    
+    MOVFF	ADRESH,LATD			; Copiem els 8 bits de m�s pes a el LATD	
+        
     
     BSF		LATE,RE0,0			; NextPos
     NOP
     NOP
     BCF		LATE,RE0,0			; NextPos
-    
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
     
     ; Servo1
     MOVLW	b'00000101';Per provar poso an1 MOVLW	b'00001101'			; ADCON0 al canal AN3 i ADON activat-------------------------------------------------------------------------------------
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
-	ESPEREM3				; Esperem a que acabi de convertir el valor
+    	ESPEREM3				; Esperem a que acabi de convertir el valor
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM3
     
-    MOVFF	ADRESH,LATD			; Copiem els 8 bits de més pes a el LATD	
+    MOVFF	ADRESH,LATD			; Copiem els 8 bits de m�s pes a el LATD	
     
     BCF		LATA,RA5,0			; R/!W RAM
-    BCF		LATA,RA4,0			; Activem !CSRam
     
     
     BSF		LATE,RE0,0			; NextPos
@@ -233,6 +246,12 @@ PLAY
     NOP
     NOP
     
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
+    NOP
     ; Llegim valor i el passem a PWMSERVO0
     MOVFF	PORTD,PWMSERVO0
     BSF		LATE,RE0,0			; Activem NextPos
@@ -241,6 +260,7 @@ PLAY
     BCF		LATE,RE0,0			; Desactivem NextPos
     NOP
     NOP
+    
     
     ; Llegim valor i el passem a PWMSERVO1
     MOVFF	PORTD,PWMSERVO1
@@ -261,6 +281,7 @@ NoPWM
     NOP
     NOP
     BCF		LATE,RE1,0			; Activem NRPos
+    
     RETURN
 
 
@@ -271,6 +292,7 @@ ResetPos
     NOP
     NOP
     BCF		LATE,RE1,0			; Activem NRPos
+    
     RETURN
 
 
@@ -288,6 +310,7 @@ HIGH_RSI
     CALL	TIMER_RSI			; Interrupcio per TIMER0
     BTFSC	INTCON,RBIF,0
     CALL	MODE_RSI			; Interrupcio per canvi de mode als switch
+    
     RETFIE FAST
     
     
@@ -375,7 +398,7 @@ MODE1
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM
     
-    MOVFF	ADRESH,PWMSERVO0		; Copiem els 8 bits de més pes a el PWMSERVO0
+    MOVFF	ADRESH,PWMSERVO0		; Copiem els 8 bits de m�s pes a el PWMSERVO0
     
     ;MOVLW	.10				; Per intentar balancejar el adresh que posem del jooystick al pwm, no funciona gaire be////////////////////////////////////
     ;SUBWF	ADRESH,0,0
@@ -389,7 +412,7 @@ MODE1
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM1
     
-    MOVFF	ADRESH,PWMSERVO1		; Copiem els 8 bits de més pes a el PWMSERVO1
+    MOVFF	ADRESH,PWMSERVO1		; Copiem els 8 bits de m�s pes a el PWMSERVO1
     ;MOVLW	.10
     ;SUBWF	ADRESH,0,0
     ;MOVWF	PWMSERVO1,0
@@ -456,6 +479,7 @@ LOOP
 Joystickeame
     BTFSC	Graba,0,0			; Si esta reproduint, la funcio joystickeame tampoc funcionara, desactiva joystick
     CALL	MODE1				; Llegir valors joystick i posar-los directament al PWMSERVOX (fer servir joystick)
+    
     GOTO ESPERA1
 
 	
@@ -475,106 +499,4 @@ INIT_OSC
     MOVWF OSCCON,0
     RETURN     
 
-SETRGB_180
-    BSF LATC0,0
-    BSF LATC1,0
-    BSF LATC2,0
-    RETURN
-SETRGB_158
-    BSF LATC0,0
-    BSF LATC1,0
-    BCF LATC2,0
-    RETURN
-SETRGB_135
-    BSF LATC0,0
-    BCF LATC1,0
-    BSF LATC2,0
-    RETURN
-SETRGB_113
-    BSF LATC0,0
-    BCF LATC1,0
-    BCF LATC2,0
-    RETURN
-SETRGB_90
-    BCF LATC0,0
-    BSF LATC1,0
-    BSF LATC2,0
-    RETURN
-SETRGB_68
-    BCF LATC0,0
-    BSF LATC1,0
-    BCF LATC2,0
-    RETURN
-SETRGB_45
-    BCF LATC0,0
-    BCF LATC1,0
-    BSF LATC2,0
-    RETURN
-SETRGB_22
-    BCF LATC0,0
-    BCF LATC1,0
-    BCF LATC2,0
-    RETURN
-
-
-
-
-RGB0
-    CLRF Canvi,0
-
-    MOVLW .159
-    CPFSLT Angle0,0
-    CALL SETRGB_180
-    MOVLW .136
-    CPFSLT Angle0,0
-    CALL SETRGB_158
-    MOVLW .114
-    CPFSLT Angle0,0
-    CALL SETRGB_135
-    MOVLW .91
-    CPFSLT Angle0,0
-    CALL SETRGB_113
-    MOVLW .69
-    CPFSLT Angle0,0
-    CALL SETRGB_90
-    MOVLW .46
-    CPFSLT Angle0,0
-    CALL SETRGB_68
-    MOVLW .23
-    CPFSLT Angle0,0
-    CALL SETRGB_45
-    CALL SETRGB_22
-    RETURN
-
-RGB1
-    SETF Canvi,0
-
-    MOVLW .159
-    CPFSLT Angle1,0
-    CALL SETRGB_180
-    MOVLW .136
-    CPFSLT Angle1,0
-    CALL SETRGB_158
-    MOVLW .114
-    CPFSLT Angle1,0
-    CALL SETRGB_135
-    MOVLW .91
-    CPFSLT Angle1,0
-    CALL SETRGB_113
-    MOVLW .69
-    CPFSLT Angle1,0
-    CALL SETRGB_90
-    MOVLW .46
-    CPFSLT Angle1,0
-    CALL SETRGB_68
-    MOVLW .23
-    CPFSLT Angle1,0
-    CALL SETRGB_45
-    CALL SETRGB_22
-    RETURN
-    
-    
-    
-    
-    
-    END
+END
