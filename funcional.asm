@@ -1,5 +1,4 @@
-
-    LIST P=PIC18F4321 F=INHX32
+LIST P=PIC18F4321 F=INHX32
     #include <p18f4321.inc>
 
 
@@ -321,11 +320,33 @@ TIMER_RSI
     MOVLW	.0
     CPFSGT	Mode,0
     CALL	MODE0				; Moviment per polsadors, 1 grau cada 20ms apretats
+    
+    
     MOVLW	.2
     CPFSLT	Mode,0	    
     CALL	MODE23				; Grabar 10 moviment per joystick/Grabar 10 moviment manual, apagar PWM's
     
     CLRF	Valor,0				; Netejem valor, que indica el temps que esta a 1 cada pwm a dins el LOOP del main
+    
+    
+    ESPERA1					; Bucle que fa 100 voltes i despr?s incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
+    MOVLW	.156				; CAL AJUSTAR PERQUE FUNCIONI DE 0 A 255, EN COMPTES DE 0 180
+    MOVWF	Count,0 
+	INCREMENTA              
+    INCF	Count,1 
+    BTFSS	STATUS,C,0  
+    GOTO	INCREMENTA
+    INCF	Valor,1				; A la interrupcio caldr? resetejarlo, igual que caldra posar a 1 les sortides dels pwm
+    MOVF	Valor,0				; Copio valor a wreg
+    CPFSGT	PWMSERVO0,0			; Valor entre el maxim i el minim que accepti el servo
+    BCF		LATC,RC3,0
+    CPFSGT	PWMSERVO1,0
+    BCF		LATC,RC4,0
+    BTFSS	LATC,RC3,0
+    BTFSC	LATC,RC4,0
+    GOTO ESPERA1
+    
+    
     
     RETURN
 
@@ -448,29 +469,23 @@ MAIN
     
 LOOP
     
+    
+    MOVLW	.1
+    SUBWF	Mode,0
+    BTFSC	STATUS,Z,0
+    CALL	MODE1
+    
+    
     MOVLW	.0				; En el cas de estar a mode diferent de 0 o 1, fer servir el joystick a la "funcio" joystickeame
     CPFSEQ	Mode,0				; Si esta reproduint, la funcio joystickeame tampoc funcionara, desactiva joystick
     MOVLW	.3
     CPFSEQ	Mode,0
     GOTO	Joystickeame
     
-    
-    
-    
-	ESPERA1					; Bucle que fa 100 voltes i despr?s incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
-    MOVLW	.217				; CAL AJUSTAR PERQUE FUNCIONI DE 0 A 255, EN COMPTES DE 0 180
-    MOVWF	Count,0 
-	INCREMENTA              
-    INCF	Count,1 
-    BTFSS	STATUS,C,0  
-    GOTO	INCREMENTA
-    INCF	Valor,1				; A la interrupcio caldr? resetejarlo, igual que caldra posar a 1 les sortides dels pwm
-    MOVF	Valor,0				; Copio valor a wreg
-    CPFSGT	PWMSERVO0,0			; Valor entre el maxim i el minim que accepti el servo
-    BCF		LATC,RC3,0
-    CPFSGT	PWMSERVO1,0
-    BCF		LATC,RC4,0	
     GOTO LOOP
+    
+    
+	
 
 	
 
@@ -478,7 +493,7 @@ Joystickeame
     BTFSC	Graba,0,0			; Si esta reproduint, la funcio joystickeame tampoc funcionara, desactiva joystick
     CALL	MODE1				; Llegir valors joystick i posar-los directament al PWMSERVOX (fer servir joystick)
     
-    GOTO ESPERA1
+    GOTO LOOP
 
 	
 	
@@ -498,5 +513,3 @@ INIT_OSC
     RETURN     
 
 END
-	
-    
