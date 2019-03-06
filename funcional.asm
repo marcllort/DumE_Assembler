@@ -178,7 +178,7 @@ DeuSeg
     CLRF	Vegades,0
     CLRF	TRISD,0				; Posem BDRam com a sortida per poder-hi escriure
     BCF		LATC,RC5,0			; Apaguem LED0 per indicar que no estem grabant
-    
+    BSF		LATA,RA4,0			; !CSRam
     BSF		LATE,RE1,0			; Activem NRPos
     NOP
     NOP
@@ -192,8 +192,6 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
 	; Un cop tenim el valor a BDRam, activarem CS per guardar i desactivarem, i despr?s farem un pols de adre?a (NextPos)
     CLRF	TRISD,0				; Inicialment posem BDRam com a SORTIDA per poder llegir	
     BSF		LATC,RC5,0			; Encenem LED0 per indicar que estem grabant
-    BCF		LATA,RA4,0			; !CSRam
-    BCF		LATA,RA5,0			; R/!W RAM
 
     ; Servo0
     MOVLW	b'00000001';Per provar poso an0 MOVLW	b'00001001'			; ADCON0 al canal AN2 i ADON activat------------------------------------------------------------------------------------
@@ -203,15 +201,14 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM2
     
-    MOVFF	ADRESH,LATD			; Copiem els 8 bits de m?s pes a el LATD	
+    
+    MOVFF	ADRESH,LATD			; Copiem els 8 bits de m?s pes a el LATD
+    
+    BCF		LATA,RA5,0			; R/!W RAM
+    BCF		LATA,RA4,0			; !CSRam
+    NOP
+    NOP
     BSF		LATA,RA4,0			; !CSRam
-
-    NOP
-    NOP
-    NOP
-    NOP
-    NOP
-    NOP    
     
     BSF		LATE,RE0,0			; NextPos
     NOP
@@ -226,11 +223,14 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     	ESPEREM3				; Esperem a que acabi de convertir el valor
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM3
-    BCF		LATA,RA4,0			; !CSRam
+    
 
     MOVFF	ADRESH,LATD			; Copiem els 8 bits de m?s pes a el LATD	
     
     BCF		LATA,RA5,0			; R/!W RAM
+    BCF		LATA,RA4,0			; !CSRam
+    NOP
+    NOP
     BSF		LATA,RA4,0			; !CSRam
 
     
@@ -246,6 +246,7 @@ PLAY
     ; Rebem el valor per BDRam, el passem a PWMSERVOX
     BCF		LATC,RC5,0			; Apaguem LED0 per indicar que estem reproduint
     SETF	TRISD,0				; Inicialment posem BDRam com a entrada per poder llegir
+    BCF		LATA,RA4,0			; !CSRam
     BSF		LATA,RA5,0			; R/!WRAM
     NOP
     NOP
@@ -396,7 +397,7 @@ MODE_RSI
 MODE0
     ;Caldra sumar/restar a PWMSERVO0 i 1, el valor de 1 grau si el respectiu pulsador esta apretat i resetejar la variable
     BCF		LATC,RC5,0			; Apago led0 si estava obert
-    MOVLW	.2				; Valor a sumar/restar per fer un grau, per fer el Ta1--------------------------------------------------------///////////////////////////////////////
+    MOVLW	.1				; Valor a sumar/restar per fer un grau, per fer el Ta1--------------------------------------------------------///////////////////////////////////////
 
     BTFSS	PORTB,RB0,0			; Fem polling per saber quin boto esta apretat i aix? saber que cal modificar
     ADDWF	PWMSERVO0,1,0
@@ -532,6 +533,3 @@ INIT_OSC
     RETURN     
 
 END
-    
-    
-    
