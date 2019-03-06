@@ -192,6 +192,7 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
 	; Un cop tenim el valor a BDRam, activarem CS per guardar i desactivarem, i despr?s farem un pols de adre?a (NextPos)
     CLRF	TRISD,0				; Inicialment posem BDRam com a SORTIDA per poder llegir	
     BSF		LATC,RC5,0			; Encenem LED0 per indicar que estem grabant
+    BCF		LATA,RA4,0			; !CSRam
     BCF		LATA,RA5,0			; R/!W RAM
 
     ; Servo0
@@ -203,7 +204,8 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     GOTO	ESPEREM2
     
     MOVFF	ADRESH,LATD			; Copiem els 8 bits de m?s pes a el LATD	
-    
+    BSF		LATA,RA4,0			; !CSRam
+
     NOP
     NOP
     NOP
@@ -224,11 +226,13 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     	ESPEREM3				; Esperem a que acabi de convertir el valor
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM3
-    
+    BCF		LATA,RA4,0			; !CSRam
+
     MOVFF	ADRESH,LATD			; Copiem els 8 bits de m?s pes a el LATD	
     
     BCF		LATA,RA5,0			; R/!W RAM
-    
+    BSF		LATA,RA4,0			; !CSRam
+
     
     BSF		LATE,RE0,0			; NextPos
     NOP
