@@ -299,7 +299,19 @@ ENVIA_PC
     RETURN    
     
     
+    LEDSRGB
     
+    BCF LATC,0,0
+    BTFSC PWMSERVO0,7,0
+    BSF LATC,0,0
+    BCF LATC,1,0
+    BTFSC PWMSERVO0,6,0
+    BSF LATC,1,0
+    BCF LATC,2,0
+    BTFSC PWMSERVO0,5,0
+    BSF LATC,2,0
+    
+    RETURN
 ; ------------------------------------------------------------------------ RSI -----------------------------------------------------------------------------------------------------------------------------
     
 HIGH_RSI
@@ -476,6 +488,9 @@ LOOP
     CALL	MODE1
     
     
+    
+    CALL LEDSRGB
+    
     MOVLW	.0				; En el cas de estar a mode diferent de 0 o 1, fer servir el joystick a la "funcio" joystickeame
     CPFSEQ	Mode,0				; Si esta reproduint, la funcio joystickeame tampoc funcionara, desactiva joystick
     MOVLW	.3
@@ -513,3 +528,6 @@ INIT_OSC
     RETURN     
 
 END
+    
+    
+    
