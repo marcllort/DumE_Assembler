@@ -31,6 +31,7 @@ Valor		EQU 0x07			; Var que serveix per comparar amb el Ta1 de cada PWM
 Count		EQU 0x08			; Contador per fer un bucle de 100 al LOOP de main
 Graba		EQU 0x09			; Var que indica si estem grabant o reproduint en el mode 3 o 4
 VarToca		EQU 0xA				; Var que serveix per indicar si cal contar o no per quan cal arribar als 10s
+VarTocaLed	EQU 0xB		
 TaulaRGB	EQU 0xC				; Taula de la combinacio de els leds RGB
 ;TaulaJoystick	EQU 0xE				; Taula de conversio del valor convertit a digital, per ajustar als limits correctes
 	
@@ -304,7 +305,9 @@ ENVIA_PC
     RETURN    
     
     
-    LEDSRGB
+LEDSRGB0
+    
+    BTG	VarTocaLed,0,0
     
     BCF LATC,0,0
     BTFSC PWMSERVO0,7,0
@@ -317,6 +320,26 @@ ENVIA_PC
     BSF LATC,2,0
     
     RETURN
+    
+    
+    
+LEDSRGB1
+    
+    BTG	VarTocaLed,0,0
+    
+    BCF LATC,0,0
+    BTFSC PWMSERVO1,7,0
+    BSF LATC,0,0
+    BCF LATC,1,0
+    BTFSC PWMSERVO1,6,0
+    BSF LATC,1,0
+    BCF LATC,2,0
+    BTFSC PWMSERVO1,5,0
+    BSF LATC,2,0
+    
+    RETURN    
+    
+    
 ; ------------------------------------------------------------------------ RSI -----------------------------------------------------------------------------------------------------------------------------
     
 HIGH_RSI
@@ -347,7 +370,7 @@ TIMER_RSI
     
     
     ESPERA1					; Bucle que fa 100 voltes i despr?s incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
-    MOVLW	.156				; CAL AJUSTAR PERQUE FUNCIONI DE 0 A 255, EN COMPTES DE 0 180
+    MOVLW	.210				; CAL AJUSTAR PERQUE FUNCIONI DE 0 A 255, EN COMPTES DE 0 180
     MOVWF	Count,0 
 	INCREMENTA              
     INCF	Count,1 
@@ -363,6 +386,11 @@ TIMER_RSI
     BTFSC	LATC,RC4,0
     GOTO ESPERA1
     
+    
+    BTFSC	VarTocaLed,0,0
+    CALL	LEDSRGB0
+    BTFSS	VarTocaLed,0,0
+    CALL	LEDSRGB1
     
     
     RETURN
@@ -494,7 +522,6 @@ LOOP
     
     
     
-    CALL LEDSRGB
     
     MOVLW	.0				; En el cas de estar a mode diferent de 0 o 1, fer servir el joystick a la "funcio" joystickeame
     CPFSEQ	Mode,0				; Si esta reproduint, la funcio joystickeame tampoc funcionara, desactiva joystick
