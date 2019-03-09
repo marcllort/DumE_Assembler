@@ -357,6 +357,12 @@ TIMER_RSI
     BSF		LATC,RC4,0			; Posem a 1 PWMSERVO1
     BTG		LATE,RE2,0			; Pols de 20ms
     
+    BTFSC	PORTE,RE2,0
+    CALL	LEDSRGB0
+    BTFSS	PORTE,RE2,0
+    CALL	LEDSRGB1
+    
+    
     MOVLW	.0
     CPFSGT	Mode,0
     CALL	MODE0				; Moviment per polsadors, 1 grau cada 20ms apretats
@@ -387,10 +393,7 @@ TIMER_RSI
     GOTO ESPERA1
     
     
-    BTFSC	VarTocaLed,0,0
-    CALL	LEDSRGB0
-    BTFSS	VarTocaLed,0,0
-    CALL	LEDSRGB1
+    
     
     
     RETURN
