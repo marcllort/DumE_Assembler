@@ -1,11 +1,9 @@
-LIST P=PIC18F4321 F=INHX32
+    LIST P=PIC18F4321 F=INHX32
     #include <p18f4321.inc>
 
 
 
 ; DUBTES
-    ; Les taules del led NO COMPILA
-    ; Procediment de grabar/reproduir no funciona
     ; Que fer si canvio de mode durant una grabacio
     
     
@@ -31,7 +29,6 @@ Valor		EQU 0x07			; Var que serveix per comparar amb el Ta1 de cada PWM
 Count		EQU 0x08			; Contador per fer un bucle de 100 al LOOP de main
 Graba		EQU 0x09			; Var que indica si estem grabant o reproduint en el mode 3 o 4
 VarToca		EQU 0xA				; Var que serveix per indicar si cal contar o no per quan cal arribar als 10s
-TaulaRGB	EQU 0xC				; Taula de la combinacio de els leds RGB
 ;TaulaJoystick	EQU 0xE				; Taula de conversio del valor convertit a digital, per ajustar als limits correctes
 	
 
@@ -100,7 +97,7 @@ INIT_PORTS
     ; Sortides
     BCF		TRISA,RA4,0			; !CSRam
     BCF		TRISA,RA5,0			; R/!WRAM
-    CLRF	TRISC,0				; ServoRGB(0 a 2), pwmServo0(3), pwmServo1(4), LED0(5)				Pot ser que TX i RX estiguin mal configurats
+    CLRF	TRISC,0				; ServoRGB(0 a 2), pwmServo0(3), pwmServo1(4), LED0(5)
     BCF		TRISE,RE0,0			; NextPos
     BCF		TRISE,RE1,0			; NRPos
     BCF		TRISE,RE2,0			; 20ms
@@ -114,8 +111,8 @@ INIT_PORTS
     BSF		TRISA,AN3,0			; AngleServo1
     SETF	TRISB,0				; PWM0+-(0,1), PWM1+-(2,3), Mode(4,5) 
     BSF		TRISE,RE3,0			; MCLR
-    BSF		TRISC,6,0			; Posem a entrada TX i RX
-    BSF		TRISC,6,0
+    BSF		TRISC,6,0			; TX
+    BSF		TRISC,7,0			; RX
 	
 	
     ; Iniciem Sortides
@@ -131,12 +128,12 @@ INIT_PORTS
     
     ; Iniciem ADCON
     MOVLW	b'00001011'			; Deixem voltatges de referencia de 0V a 5V
-    MOVWF	ADCON1,0			; Posem els ports anal?gics del AN0 al AN3
+    MOVWF	ADCON1,0			; Posem els ports analogics del AN0 al AN3
     MOVLW	b'00001001'			; Justifiquem a la esquerra (ADRESH) i temps i clock a alta velocitat
     MOVWF	ADCON2,0
     
 
-    ; Pull-Ups (Nose si cal)
+    ; Pull-Ups interns activats
     BCF		INTCON2, RBPU,0
     
     RETURN
@@ -191,17 +188,18 @@ DeuSeg
     CLRF	TRISD,0				; Posem BDRam com a sortida per poder-hi escriure
     BCF		LATC,RC5,0			; Apaguem LED0 per indicar que no estem grabant
     BSF		LATA,RA4,0			; !CSRam
-    BSF		LATE,RE1,0			; Activem NRPos
+    BSF		LATE,RE1,0			; Activem NRPos (Per restejar contador)
     NOP
     NOP
-    BCF		LATE,RE1,0			; Activem NRPos
+    BCF		LATE,RE1,0			; Desactivem NRPos
     
     RETURN    
     
     
 RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritura i !CSRam a 1 (desactivat)
 	; Primer ens caldra traduir de analogic a digital, i treure aquest valor per BDRam [0..7]
-	; Un cop tenim el valor a BDRam, activarem CS per guardar i desactivarem, i despr?s farem un pols de adre?a (NextPos)
+	; Un cop tenim el valor a BDRam, activarem CS per guardar i desactivarem, i despres farem un pols de adre?a (NextPos)
+	
     CLRF	TRISD,0				; Inicialment posem BDRam com a SORTIDA per poder llegir	
     BSF		LATC,RC5,0			; Encenem LED0 per indicar que estem grabant
 
@@ -214,13 +212,13 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     GOTO	ESPEREM2
     
     
-    MOVFF	ADRESH,LATD			; Copiem els 8 bits de m?s pes a el LATD
+    MOVFF	ADRESH,LATD			; Copiem els 8 bits de mes pes a el LATD
     
-    BCF		LATA,RA5,0			; R/!W RAM
-    BCF		LATA,RA4,0			; !CSRam
+    BCF		LATA,RA5,0			; R/!W RAM mode escritura
+    BCF		LATA,RA4,0			; Activem !CSRam
     NOP
     NOP
-    BSF		LATA,RA4,0			; !CSRam
+    BSF		LATA,RA4,0			; Desactivem !CSRam
     
     BSF		LATE,RE0,0			; NextPos
     NOP
@@ -232,18 +230,18 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     MOVLW	b'00000101';Per provar poso an1 MOVLW	b'00001101'			; ADCON0 al canal AN3 i ADON activat-------------------------------------------------------------------------------------
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
-    	ESPEREM3				; Esperem a que acabi de convertir el valor
+	ESPEREM3				; Esperem a que acabi de convertir el valor
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM3
     
 
-    MOVFF	ADRESH,LATD			; Copiem els 8 bits de m?s pes a el LATD	
+    MOVFF	ADRESH,LATD			; Copiem els 8 bits de mes pes a el LATD	
     
-    BCF		LATA,RA5,0			; R/!W RAM
-    BCF		LATA,RA4,0			; !CSRam
+    BCF		LATA,RA5,0			; R/!W RAM mode escritura
+    BCF		LATA,RA4,0			; Activem !CSRam
     NOP
     NOP
-    BSF		LATA,RA4,0			; !CSRam
+    BSF		LATA,RA4,0			; Desactivem !CSRam
 
     
     BSF		LATE,RE0,0			; NextPos
@@ -256,14 +254,13 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
 
 PLAY    
     ; Rebem el valor per BDRam, el passem a PWMSERVOX
+    
     BCF		LATC,RC5,0			; Apaguem LED0 per indicar que estem reproduint
     SETF	TRISD,0				; Inicialment posem BDRam com a entrada per poder llegir
-    BCF		LATA,RA4,0			; !CSRam
-    BSF		LATA,RA5,0			; R/!WRAM
+    BCF		LATA,RA4,0			; !CSRam activat per poder llegir
+    BSF		LATA,RA5,0			; R/!WRAM mode lectura
     NOP
     NOP
-    
-    
     
     
     ; Llegim valor i el passem a PWMSERVO0
@@ -289,9 +286,9 @@ PLAY
 NoPWM
     CLRF	Vegades,0			; Netejo variable de nombre de cops contats per arribar a 10s
     SETF	Graba,0				; Poso a 1, perque grabi al entrar al mode
-    BSF		TRISC,RC6,0			; pwmServo0
-    BSF		TRISC,RC7,0			; pwmServo1
-    BSF		LATE,RE1,0			; Activem NRPos
+    BSF		TRISC,RC6,0			; pwmServo0 posem com entrada perque no funcioni el servo
+    BSF		TRISC,RC7,0			; pwmServo1 posem com entrada perque no funcioni el servo
+    BSF		LATE,RE1,0			; Activem NRPos per començar a grabar desde inici RAM
     NOP
     NOP
     BCF		LATE,RE1,0			; Activem NRPos
@@ -311,18 +308,18 @@ ResetPos
 
     
 REBRE_PC
-    MOVFF	RCREG, PWMSERVO0
+    MOVFF	RCREG, PWMSERVO0		; Copiem valor rebut de PC a PWMSERVO0
     WAIT_REP
-    BTFSC	PIR1, RCIF,0			; Esperem a rebre el byte
+    BTFSC	PIR1, RCIF,0			; Esperem a rebre el 2n byte, el de PWMSERVO1
     MOVFF	RCREG, PWMSERVO1
-    BTFSS	PIR1, RCIF,0
+    BTFSS	PIR1, RCIF,0			; Copiem valor rebut de PC a PWMSERVO0
     GOTO	WAIT_REP   
 RETURN    
     
     
-LEDSRGB0
+LEDSRGB0					; Mirem 3 bits de mes pes de PWMSERVO0, per saber a quin "grau" es troba
         
-    BCF LATC,0,0
+    BCF LATC,0,0				
     BTFSC PWMSERVO0,7,0
     BSF LATC,0,0
     BCF LATC,1,0
@@ -336,7 +333,7 @@ LEDSRGB0
     
     
     
-LEDSRGB1
+LEDSRGB1					; Mirem 3 bits de mes pes de PWMSERVO1, per saber a quin "grau" es troba
         
     BCF LATC,0,0
     BTFSC PWMSERVO1,7,0
@@ -368,9 +365,9 @@ TIMER_RSI
     BSF		LATC,RC4,0			; Posem a 1 PWMSERVO1
     BTG		LATE,RE2,0			; Pols de 20ms
     
-    BTFSC	PORTE,RE2,0
+    BTFSC	PORTE,RE2,0			; Segons si 20ms (pin Sortida) es a 0 o 1, posem valor de PWMSERVO 0 o 1
     CALL	LEDSRGB0
-    BTFSS	PORTE,RE2,0
+    BTFSS	PORTE,RE2,0			; Els transistors faran que es vegi correctament
     CALL	LEDSRGB1
     
     
@@ -386,27 +383,26 @@ TIMER_RSI
     CLRF	Valor,0				; Netejem valor, que indica el temps que esta a 1 cada pwm a dins el LOOP del main
     
     
-    WAITenvia0
-    BTFSS TXSTA, TRMT, 0		; Esperem a que s’hagi acabat d’enviar el anterior
+	WAITenvia0
+    BTFSS TXSTA, TRMT, 0			; Esperem a que s’hagi acabat d’enviar el anterior valor
     GOTO WAITenvia0	
-    ENVIA0
-    MOVFF PWMSERVO0, TXREG 		; Enviem PWMSERVO0
-    WAITenvia1
-    BTFSS TXSTA, TRMT, 0		; Esperem a que s’hagi acabat d’enviar el anterior
+    MOVFF PWMSERVO0, TXREG			; Enviem PWMSERVO0
+    
+	WAITenvia1
+    BTFSS TXSTA, TRMT, 0			; Esperem a que s’hagi acabat d’enviar el anterior valor
     GOTO WAITenvia1	
-    ENVIA1
-    MOVFF PWMSERVO1, TXREG 		; Enviem PWMSERVO1
+    MOVFF PWMSERVO1, TXREG			; Enviem PWMSERVO1
 
     
     
-    ESPERA1					; Bucle que fa 100 voltes i despr?s incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
-    MOVLW	.210				; CAL AJUSTAR PERQUE FUNCIONI DE 0 A 255, EN COMPTES DE 0 180
+	ESPERA1					; Bucle que fa 100 voltes i despres incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
+    MOVLW	.210				
     MOVWF	Count,0 
 	INCREMENTA              
     INCF	Count,1 
     BTFSS	STATUS,C,0  
     GOTO	INCREMENTA
-    INCF	Valor,1				; A la interrupcio caldr? resetejarlo, igual que caldra posar a 1 les sortides dels pwm
+    INCF	Valor,1				; A la interrupcio cal resetejarlo, igual que caldra posar a 1 les sortides dels pwm
     MOVF	Valor,0				; Copio valor a wreg
     CPFSGT	PWMSERVO0,0			; Valor entre el maxim i el minim que accepti el servo
     BCF		LATC,RC3,0
@@ -415,9 +411,6 @@ TIMER_RSI
     BTFSS	LATC,RC3,0
     BTFSC	LATC,RC4,0
     GOTO ESPERA1
-    
-    
-    
     
     
     RETURN
@@ -445,24 +438,24 @@ MODE_RSI
     
     RETURN    
     
-    SERV0ADD
-	MOVLW	    .255
-	MOVWF	    PWMSERVO0,0
+SERV0ADD
+    MOVLW	    .255
+    MOVWF	    PWMSERVO0,0
     RETURN
     
-    SERV0SUB
-	MOVLW	    .0
-	MOVWF	    PWMSERVO0,0
+SERV0SUB
+    MOVLW	    .0
+    MOVWF	    PWMSERVO0,0
     RETURN
     
-    SERV1ADD
-	MOVLW	    .255
-	MOVWF	    PWMSERVO1,0
+SERV1ADD
+    MOVLW	    .255
+    MOVWF	    PWMSERVO1,0
     RETURN
     
-    SERV1SUB
-	MOVLW	    .0
-	MOVWF	    PWMSERVO1,0
+SERV1SUB
+    MOVLW	    .0
+    MOVWF	    PWMSERVO1,0
     RETURN
     
 ; ---------------------------------------------------------------------- MODES -------------------------------------------------------------------------------------------------------------------------
@@ -494,12 +487,9 @@ MODE0
     SUBWF	PWMSERVO1,1,0
     
     
-    BTFSC PIR1, RCIF,0
-    CALL    REBRE_PC
-   
-    
+    BTFSC	PIR1, RCIF,0			; Si ha rebut algun bit del PC, cridem funcio perque apliqui el valor als PWM
+    CALL	REBRE_PC
 
-    
     
     
     ;BTFSC	STATUS,Z,0
@@ -580,13 +570,10 @@ MAIN
     
 LOOP
     
-    
-    MOVLW	.1
+    MOVLW	.1				; Si esta al mode 1, cridem la funcio que passa els valors del joystick als servos
     SUBWF	Mode,0
     BTFSC	STATUS,Z,0
     CALL	MODE1
-    
-    
     
     
     MOVLW	.0				; En el cas de estar a mode diferent de 0 o 1, fer servir el joystick a la "funcio" joystickeame
@@ -597,23 +584,14 @@ LOOP
     
     GOTO LOOP
     
-    
-	
-
 	
 
 Joystickeame
-    BTFSC	Graba,0,0			; Si esta reproduint, la funcio joystickeame tampoc funcionara, desactiva joystick
+    BTFSC	Graba,0,0			; Si esta reproduint, la funcio joystickeame desactiva joystick
     CALL	MODE1				; Llegir valors joystick i posar-los directament al PWMSERVOX (fer servir joystick)
     
     GOTO LOOP
 
-	
-	
-	
-	
-	
-	
 	
 	
 	
