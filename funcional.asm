@@ -31,7 +31,6 @@ Valor		EQU 0x07			; Var que serveix per comparar amb el Ta1 de cada PWM
 Count		EQU 0x08			; Contador per fer un bucle de 100 al LOOP de main
 Graba		EQU 0x09			; Var que indica si estem grabant o reproduint en el mode 3 o 4
 VarToca		EQU 0xA				; Var que serveix per indicar si cal contar o no per quan cal arribar als 10s
-VarTocaLed	EQU 0xB		
 TaulaRGB	EQU 0xC				; Taula de la combinacio de els leds RGB
 ;TaulaJoystick	EQU 0xE				; Taula de conversio del valor convertit a digital, per ajustar als limits correctes
 	
@@ -158,7 +157,19 @@ INIT_TIMER
     
     RETURN    
     
+INIT_PCCON
+    MOVLW b'00100000'				; Activem TXEN
+    MOVWF TXSTA,0
+
+    MOVLW b'10010000'				; Activem SPEN i CREN
+    MOVWF RCSTA,0
+
+    BCF BAUDCON, BRG16, 0			; Desactivem BRG16 perquè funcioni a 8 bits
+	
+    MOVLW .64					; Posem el valor calculat perquè el baudrate sigui de 9600
+    MOVWF SPBRG,0
     
+    RETURN
     
     
     
@@ -298,17 +309,19 @@ ResetPos
     
     RETURN
 
-
-ENVIA_PC
-
-
-    RETURN    
+    
+REBRE_PC
+    MOVFF	RCREG, PWMSERVO0
+    WAIT_REP
+    BTFSC	PIR1, RCIF,0			; Esperem a rebre el byte
+    MOVFF	RCREG, PWMSERVO1
+    BTFSS	PIR1, RCIF,0
+    GOTO	WAIT_REP   
+RETURN    
     
     
 LEDSRGB0
-    
-    BTG	VarTocaLed,0,0
-    
+        
     BCF LATC,0,0
     BTFSC PWMSERVO0,7,0
     BSF LATC,0,0
@@ -324,9 +337,7 @@ LEDSRGB0
     
     
 LEDSRGB1
-    
-    BTG	VarTocaLed,0,0
-    
+        
     BCF LATC,0,0
     BTFSC PWMSERVO1,7,0
     BSF LATC,0,0
@@ -375,6 +386,19 @@ TIMER_RSI
     CLRF	Valor,0				; Netejem valor, que indica el temps que esta a 1 cada pwm a dins el LOOP del main
     
     
+    WAITenvia0
+    BTFSS TXSTA, TRMT, 0		; Esperem a que s’hagi acabat d’enviar el anterior
+    GOTO WAITenvia0	
+    ENVIA0
+    MOVFF PWMSERVO0, TXREG 		; Enviem PWMSERVO0
+    WAITenvia1
+    BTFSS TXSTA, TRMT, 0		; Esperem a que s’hagi acabat d’enviar el anterior
+    GOTO WAITenvia1	
+    ENVIA1
+    MOVFF PWMSERVO1, TXREG 		; Enviem PWMSERVO1
+
+    
+    
     ESPERA1					; Bucle que fa 100 voltes i despr?s incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
     MOVLW	.210				; CAL AJUSTAR PERQUE FUNCIONI DE 0 A 255, EN COMPTES DE 0 180
     MOVWF	Count,0 
@@ -421,27 +445,65 @@ MODE_RSI
     
     RETURN    
     
+    SERV0ADD
+	MOVLW	    .255
+	MOVWF	    PWMSERVO0,0
+    RETURN
     
+    SERV0SUB
+	MOVLW	    .0
+	MOVWF	    PWMSERVO0,0
+    RETURN
+    
+    SERV1ADD
+	MOVLW	    .255
+	MOVWF	    PWMSERVO1,0
+    RETURN
+    
+    SERV1SUB
+	MOVLW	    .0
+	MOVWF	    PWMSERVO1,0
+    RETURN
     
 ; ---------------------------------------------------------------------- MODES -------------------------------------------------------------------------------------------------------------------------
     
 MODE0
     ;Caldra sumar/restar a PWMSERVO0 i 1, el valor de 1 grau si el respectiu pulsador esta apretat i resetejar la variable
     BCF		LATC,RC5,0			; Apago led0 si estava obert
+    
     MOVLW	.1				; Valor a sumar/restar per fer un grau, per fer el Ta1--------------------------------------------------------///////////////////////////////////////
-
     BTFSS	PORTB,RB0,0			; Fem polling per saber quin boto esta apretat i aix? saber que cal modificar
     ADDWF	PWMSERVO0,1,0
+    ;BTFSC	STATUS,OV,0
+    ;CALL	SERV0ADD
     
-        
+    MOVLW	.1    
     BTFSS	PORTB,RB1,0
     SUBWF	PWMSERVO0,1,0
-
+    ;BTFSC	STATUS,Z,0
+    ;CALL	SERV0SUB
+    
+    MOVLW	.1
     BTFSS	PORTB,RB2,0
     ADDWF	PWMSERVO1,1,0
+    ;BTFSC	STATUS,OV,0
+    ;CALL	SERV1ADD
 
+    MOVLW	.1
     BTFSS	PORTB,RB3,0
     SUBWF	PWMSERVO1,1,0
+    
+    
+    BTFSC PIR1, RCIF,0
+    CALL    REBRE_PC
+   
+    
+
+    
+    
+    
+    ;BTFSC	STATUS,Z,0
+    ;CALL	SERV1SUB
 
     ;MOVLW	.255				; Controlem si el Servo es passa de 180 per no for?ar-lo----------------------------------------------------------/////////////////////////////////
     ;CPFSLT	PWMSERVO0,0
@@ -475,7 +537,7 @@ MODE1
     MOVLW	b'00000101'			; ADCON0 al canal AN1 i ADON activat							PROVOCA ERROR EN LA GENERACIO DE PWM, CONVERTEIX MOLT LENT/////////////////////////
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
-	ESPEREM1					; Esperem a que acabi de convertir el valor
+	ESPEREM1				; Esperem a que acabi de convertir el valor
     BTFSC	ADCON0,1,0
     GOTO	ESPEREM1
     
@@ -514,6 +576,7 @@ MAIN
     CALL	INIT_PORTS
     CALL	INIT_RSI
     CALL	INIT_TIMER
+    CALL	INIT_PCCON
     
 LOOP
     
