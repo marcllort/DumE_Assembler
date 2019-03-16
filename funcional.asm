@@ -1,4 +1,5 @@
- LIST P=PIC18F4321 F=INHX32
+ 
+LIST P=PIC18F4321 F=INHX32
     #include <p18f4321.inc>
 
 
@@ -35,6 +36,8 @@ Valor		EQU 0x07			; Var que serveix per comparar amb el Ta1 de cada PWM
 Count		EQU 0x08			; Contador per fer un bucle de 100 al LOOP de main
 Graba		EQU 0x09			; Var que indica si estem grabant o reproduint en el mode 3 o 4
 VarToca		EQU 0xA				; Var que serveix per indicar si cal contar o no per quan cal arribar als 10s
+Lock		EQU 0xB				; Var per bloquejar els PWMSERVO perque no siguin ciclics (255 a 0 i al reves)
+Var0Toca	EQU 0xC				; Flag per saber si toca fer el Mode0, serveix per relentizar-lo, i aixi no sumi gaires graus
 ;TaulaJoystick	EQU 0xE				; Taula de conversio del valor convertit a digital, per ajustar als limits correctes
 	
 		
@@ -87,7 +90,10 @@ INIT_VARS
     CLRF	Valor,0
     CLRF	Count,0
     SETF	Graba,0
-
+    
+    CLRF	Lock,0
+    SETF	Var0Toca,0
+    
     RETURN
     
    
@@ -204,7 +210,13 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     BSF		LATC,RC5,0			; Encenem LED0 per indicar que estem grabant
 
     ; Servo0
-    MOVLW	b'00000001';Per provar poso an0 MOVLW	b'00001001'			; ADCON0 al canal AN2 i ADON activat------------------------------------------------------------------------------------
+    ;Segons el mode, haurem de convertir el valor analogic de el joystick o el servo
+
+    BTFSS	Mode,1,0
+    MOVLW	b'00000001'			; ADCON0 al canal AN0 i ADON activat
+    BTFSC	Mode,1,0
+    MOVLW	b'00001001'			; ADCON0 al canal AN2 i ADON activat
+    
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
 	ESPEREM2				; Esperem a que acabi de convertir el valor
@@ -227,7 +239,13 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     
     
     ; Servo1
-    MOVLW	b'00000101';Per provar poso an1 MOVLW	b'00001101'			; ADCON0 al canal AN3 i ADON activat-------------------------------------------------------------------------------------
+    ;Segons el mode, haurem de convertir el valor analogic de el joystick o el servo
+    
+    BTFSS	Mode,1,0
+    MOVLW	b'00000101'			; ADCON0 al canal AN1 i ADON activat
+    BTFSC	Mode,1,0
+    MOVLW	b'00001101'			; ADCON0 al canal AN3 i ADON activat
+    
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
 	ESPEREM3				; Esperem a que acabi de convertir el valor
@@ -346,25 +364,94 @@ LEDSRGB1					; Mirem 3 bits de mes pes de PWMSERVO1, per saber a quin "grau" es 
     
     RETURN  
 
+PRESERV0ADD  
+    ; Si la operacio esta bloquejada, no la fem
+
+    BTFSS	    Lock,0,0
+    CALL	    SERV0ADD
+    
+    RETURN
+    
     
 SERV0ADD
+    ; Controlem si el Servo es passa de 180 per no forcar-lo
+
+    MOVLW	    .1
+    ADDWF	    PWMSERVO0,1,0
+    BCF		    Lock,1,0			; Desbloquejo la resta
     MOVLW	    .255
-    MOVWF	    PWMSERVO0,0
+    SUBWF	    PWMSERVO0,0
+    BTFSC	    STATUS,Z,0
+    BSF		    Lock,0,0
+    
     RETURN
+    
+PRESERV0SUB    
+    ; Si la operacio esta bloquejada, no la fem
+
+    
+    BTFSS	    Lock,1,0
+    CALL	    SERV0SUB
+    
+    RETURN    
     
 SERV0SUB
+    ; Controlem si el Servo es passa de 180 per no forcar-lo
+    
+    MOVLW	    .1
+    SUBWF	    PWMSERVO0,1,0
+    BCF		    Lock,0,0			; Desbloquejo la suma
     MOVLW	    .0
-    MOVWF	    PWMSERVO0,0
+    SUBWF	    PWMSERVO0,0
+    BTFSC	    STATUS,Z,0
+    BSF		    Lock,1,0
+    
+    
     RETURN
+    
+    
+PRESERV1ADD    
+    ; Si la operacio esta bloquejada, no la fem
+
+    BTFSS	    Lock,2,0
+    CALL	    SERV1ADD
+    
+    RETURN    
+    
     
 SERV1ADD
+    ; Controlem si el Servo es passa de 180 per no forcar-lo
+    
+    MOVLW	    .1
+    ADDWF	    PWMSERVO1,1,0
+    BCF		    Lock,3,0			; Desbloquejo la resta
     MOVLW	    .255
-    MOVWF	    PWMSERVO1,0
+    SUBWF	    PWMSERVO1,0,0
+    BTFSC	    STATUS,Z,0
+    BSF		    Lock,2,0
+    
     RETURN
     
+    
+PRESERV1SUB    
+    ; Si la operacio esta bloquejada, no la fem
+    
+    BTFSS	    Lock,3,0
+    CALL	    SERV1SUB
+    
+    RETURN     
+    
 SERV1SUB
+    ; Controlem si el Servo es passa de 180 per no forcar-lo
+    
+    MOVLW	    .1
+    SUBWF	    PWMSERVO1,1,0
+    BCF		    Lock,2,0			; Desbloquejo la suma
     MOVLW	    .0
-    MOVWF	    PWMSERVO1,0
+    SUBWF	    PWMSERVO1,0,0
+    BTFSC	    STATUS,Z,0
+    BSF		    Lock,3,0
+    
     RETURN    
     
     
@@ -395,8 +482,8 @@ TIMER_RSI
     
     MOVLW	.0
     CPFSGT	Mode,0
-    CALL	MODE0				; Moviment per polsadors, 1 grau cada 20ms apretats
-    
+    CALL	MODE0toca			; Moviment per polsadors, 1 grau cada 20ms apretats
+   
     
     MOVLW	.2
     CPFSLT	Mode,0	    
@@ -424,12 +511,12 @@ TIMER_RSI
     
     
     WAITenvia0
-    BTFSS TXSTA, TRMT, 0			; Esperem a que s’hagi acabat d’enviar el anterior
+    BTFSS TXSTA, TRMT, 0			; Esperem a que s?hagi acabat d?enviar el anterior
     GOTO WAITenvia0	
     ENVIA0
     MOVFF PWMSERVO0, TXREG			; Enviem PWMSERVO0
     WAITenvia1
-    BTFSS TXSTA, TRMT, 0			; Esperem a que s’hagi acabat d’enviar el anterior
+    BTFSS TXSTA, TRMT, 0			; Esperem a que s?hagi acabat d?enviar el anterior
     GOTO WAITenvia1	
     ENVIA1
     MOVFF PWMSERVO1, TXREG			; Enviem PWMSERVO1
@@ -445,7 +532,6 @@ MODE_RSI
     BTFSC	PORTB,RB5,0
     BSF		Mode,1,0
 
-    ; Caldra bloquejar que si esta grabant no puguis canviar de mode????-------------------------------------------------------------------------------------------//////////////////////////////////////////
 
     MOVLW	.3				; Si es mode 3, desactivem PWM's per poder moure servos manualment
     CPFSLT	Mode,0
@@ -462,43 +548,31 @@ MODE_RSI
     
     
 ; ---------------------------------------------------------------------- MODES -------------------------------------------------------------------------------------------------------------------------
+
+MODE0toca					; Funcio que ens serveix per fer més precís el mode0, ja que sino es molt rapid
+    BTG		Var0Toca,0,0
+    BTFSC	Var0Toca,0,0
+    CALL	MODE0
+    
+    RETURN
+    
     
 MODE0
-    ;Caldra sumar/restar a PWMSERVO0 i 1, el valor de 1 grau si el respectiu pulsador esta apretat i resetejar la variable
     BCF		LATC,RC5,0			; Apago led0 si estava obert
     
-    MOVLW	.1				; Valor a sumar/restar per fer un grau, per fer el Ta1--------------------------------------------------------///////////////////////////////////////
+    
     BTFSS	PORTB,RB0,0			; Fem polling per saber quin boto esta apretat i aix? saber que cal modificar
-    ADDWF	PWMSERVO0,1,0
-    ;BTFSC	STATUS,OV,0
-    ;CALL	SERV0ADD
+    CALL	PRESERV0ADD
     
-    MOVLW	.1    
     BTFSS	PORTB,RB1,0
-    SUBWF	PWMSERVO0,1,0
-    ;BTFSC	STATUS,Z,0
-    ;CALL	SERV0SUB
+    CALL	PRESERV0SUB
     
-    MOVLW	.1
     BTFSS	PORTB,RB2,0
-    ADDWF	PWMSERVO1,1,0
-    ;BTFSC	STATUS,OV,0
-    ;CALL	SERV1ADD
-
-    MOVLW	.1
-    BTFSS	PORTB,RB3,0
-    SUBWF	PWMSERVO1,1,0
-    ;BTFSC	STATUS,Z,0
-    ;CALL	SERV1SUB
-
+    CALL	PRESERV1ADD
     
-    ;MOVLW	.255				; Controlem si el Servo es passa de 180 per no for?ar-lo----------------------------------------------------------/////////////////////////////////
-    ;CPFSLT	PWMSERVO0,0
-    ;MOVWF	PWMSERVO0,0
+    BTFSS	PORTB,RB3,0
+    CALL	PRESERV1SUB
 
-    ;MOVLW	.0				; Controlem si el Servo es passa per sota de 0 per no for?ar-lo CREC Q NO CALDRA CAP DELS DOS
-    ;CPFSGT	PWMSERVO0,0
-    ;MOVWF	PWMSERVO0,0
 
     RETURN
 
