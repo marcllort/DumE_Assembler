@@ -1,4 +1,3 @@
- 
 LIST P=PIC18F4321 F=INHX32
     #include <p18f4321.inc>
 
@@ -208,13 +207,16 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
 	
     CLRF	TRISD,0				; Inicialment posem BDRam com a SORTIDA per poder llegir	
     BSF		LATC,RC5,0			; Encenem LED0 per indicar que estem grabant
+    
+    BTFSC	Mode,0,0
+    CALL	DesactivaSortida    
 
     ; Servo0
     ;Segons el mode, haurem de convertir el valor analogic de el joystick o el servo
 
-    BTFSS	Mode,1,0
+    BTFSS	Mode,0,0
     MOVLW	b'00000001'			; ADCON0 al canal AN0 i ADON activat
-    BTFSC	Mode,1,0
+    BTFSC	Mode,0,0
     MOVLW	b'00001001'			; ADCON0 al canal AN2 i ADON activat
     
     MOVWF	ADCON0,0
@@ -272,6 +274,8 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
 
 PLAY    
     ; Rebem el valor per BDRam, el passem a PWMSERVOX
+    BCF		TRISC,RC3,0			; pwmServo0 posem com sortida
+    BCF		TRISC,RC4,0			; pwmServo1 posem com sortida
     
     BCF		LATC,RC5,0			; Apaguem LED0 per indicar que estem reproduint
     SETF	TRISD,0				; Inicialment posem BDRam com a entrada per poder llegir
@@ -304,8 +308,8 @@ PLAY
 NoPWM
     CLRF	Vegades,0			; Netejo variable de nombre de cops contats per arribar a 10s
     SETF	Graba,0				; Poso a 1, perque grabi al entrar al mode
-    BSF		TRISC,RC6,0			; pwmServo0 posem com entrada perque no funcioni el servo
-    BSF		TRISC,RC7,0			; pwmServo1 posem com entrada perque no funcioni el servo
+    BSF		TRISC,RC3,0			; pwmServo0 posem com entrada perque no funcioni el servo
+    BSF		TRISC,RC4,0			; pwmServo1 posem com entrada perque no funcioni el servo
     BSF		LATE,RE1,0			; Activem NRPos per començar a grabar desde inici RAM
     NOP
     NOP
@@ -313,6 +317,11 @@ NoPWM
     
     RETURN
 
+DesactivaSortida
+    BSF		TRISC,RC3,0			; pwmServo0 posem com entrada perque no funcioni el servo
+    BSF		TRISC,RC4,0			; pwmServo1 posem com entrada perque no funcioni el servo
+    
+    RETURN
 
 ResetPos
     CLRF	Vegades,0			; Netejo variable de nombre de cops contats per arribar a 10s
@@ -531,6 +540,9 @@ MODE_RSI
     BCF		Mode,1,0
     BTFSC	PORTB,RB5,0
     BSF		Mode,1,0
+    
+    BCF		TRISC,RC3,0			; pwmServo0 posem com sortida
+    BCF		TRISC,RC4,0			; pwmServo1 posem com sortida
 
 
     MOVLW	.3				; Si es mode 3, desactivem PWM's per poder moure servos manualment
