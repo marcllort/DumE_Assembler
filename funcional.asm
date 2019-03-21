@@ -37,7 +37,6 @@ Graba		EQU 0x09			; Var que indica si estem grabant o reproduint en el mode 3 o 
 VarToca		EQU 0xA				; Var que serveix per indicar si cal contar o no per quan cal arribar als 10s
 Lock		EQU 0xB				; Var per bloquejar els PWMSERVO perque no siguin ciclics (255 a 0 i al reves)
 Var0Toca	EQU 0xC				; Flag per saber si toca fer el Mode0, serveix per relentizar-lo, i aixi no sumi gaires graus
-;TaulaJoystick	EQU 0xE				; Taula de conversio del valor convertit a digital, per ajustar als limits correctes
 	
 		
 
@@ -51,24 +50,9 @@ Var0Toca	EQU 0xC				; Flag per saber si toca fer el Mode0, serveix per relentiza
     RETFIE  FAST		
 		
 
-		
-		
-; ------------------------------------------------------------------------ TAULES -------------------------------------------------------------------------------------------------------------------		
-		
-    ;ORG TaulaRGB		
-;Segments del 0, segments del 23
-    ;DB 0x00, 0x01
-;Segments del 46, segments del 69
-    ;DB 0x02, 0x03
-;Segments del 91, segments del 114
-    ;DB 0x04, 0x05
-;Segments del 136, segments del 159
-    ;DB 0x06, 0x07
-    
 
 ; ----------------------------------------------------------------------- INITS ---------------------------------------------------------------------------------------------------------------------
 
-		
 		
     
 INIT_VARS
@@ -208,7 +192,7 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     CLRF	TRISD,0				; Inicialment posem BDRam com a SORTIDA per poder llegir	
     BSF		LATC,RC5,0			; Encenem LED0 per indicar que estem grabant
     
-    BTFSC	Mode,0,0
+    BTFSC	Mode,0,0			; Si som al mode 3, descativem el pwm dels servos
     CALL	DesactivaSortida    
 
     ; Servo0
@@ -398,7 +382,6 @@ SERV0ADD
 PRESERV0SUB    
     ; Si la operacio esta bloquejada, no la fem
 
-    
     BTFSS	    Lock,1,0
     CALL	    SERV0SUB
     
@@ -573,8 +556,8 @@ MODE0
     BCF		LATC,RC5,0			; Apago led0 si estava obert
     
     
-    BTFSS	PORTB,RB0,0			; Fem polling per saber quin boto esta apretat i aix? saber que cal modificar
-    CALL	PRESERV0ADD
+    BTFSS	PORTB,RB0,0			; Fem polling per saber quin boto esta apretat i aixi saber que cal modificar
+    CALL	PRESERV0ADD			; Les funcions pre-X serveixen per bloquejar el pas de 0 a 255 o a l'inreves
     
     BTFSS	PORTB,RB1,0
     CALL	PRESERV0SUB
