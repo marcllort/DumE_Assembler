@@ -243,9 +243,9 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     ; Servo1
     ;Segons el mode, haurem de convertir el valor analogic de el joystick o el servo
     
-    BTFSS	Mode,1,0
+    BTFSS	Mode,0,0
     MOVLW	b'00000101'			; ADCON0 al canal AN1 i ADON activat
-    BTFSC	Mode,1,0
+    BTFSC	Mode,0,0
     MOVLW	b'00001101'			; ADCON0 al canal AN3 i ADON activat
     
     MOVWF	ADCON0,0
