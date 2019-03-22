@@ -37,6 +37,8 @@ Graba		EQU 0x09			; Var que indica si estem grabant o reproduint en el mode 3 o 
 VarToca		EQU 0xA				; Var que serveix per indicar si cal contar o no per quan cal arribar als 10s
 Lock		EQU 0xB				; Var per bloquejar els PWMSERVO perque no siguin ciclics (255 a 0 i al reves)
 Var0Toca	EQU 0xC				; Flag per saber si toca fer el Mode0, serveix per relentizar-lo, i aixi no sumi gaires graus
+TOCA0		EQU 0XD
+	;TaulaJoystick	EQU 0xE				; Taula de conversio del valor convertit a digital, per ajustar als limits correctes
 	
 		
 
@@ -50,9 +52,24 @@ Var0Toca	EQU 0xC				; Flag per saber si toca fer el Mode0, serveix per relentiza
     RETFIE  FAST		
 		
 
+		
+		
+; ------------------------------------------------------------------------ TAULES -------------------------------------------------------------------------------------------------------------------		
+		
+    ;ORG TaulaRGB		
+;Segments del 0, segments del 23
+    ;DB 0x00, 0x01
+;Segments del 46, segments del 69
+    ;DB 0x02, 0x03
+;Segments del 91, segments del 114
+    ;DB 0x04, 0x05
+;Segments del 136, segments del 159
+    ;DB 0x06, 0x07
+    
 
 ; ----------------------------------------------------------------------- INITS ---------------------------------------------------------------------------------------------------------------------
 
+		
 		
     
 INIT_VARS
@@ -76,6 +93,7 @@ INIT_VARS
     
     CLRF	Lock,0
     SETF	Var0Toca,0
+    CLRF	TOCA0,0
     
     RETURN
     
@@ -192,7 +210,7 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     CLRF	TRISD,0				; Inicialment posem BDRam com a SORTIDA per poder llegir	
     BSF		LATC,RC5,0			; Encenem LED0 per indicar que estem grabant
     
-    BTFSC	Mode,0,0			; Si som al mode 3, descativem el pwm dels servos
+    BTFSC	Mode,0,0
     CALL	DesactivaSortida    
 
     ; Servo0
@@ -318,14 +336,17 @@ ResetPos
     RETURN
 
 
+    
 REBRE_PC
+    
+    BTFSS	TOCA0,0,0
     MOVFF	RCREG, PWMSERVO0		; Copiem valor rebut de PC a PWMSERVO0
-    WAIT_REP
-    BTFSC	PIR1, RCIF,0			; Esperem a rebre el 2n byte, el de PWMSERVO1
+    BTFSC	TOCA0,0,0
     MOVFF	RCREG, PWMSERVO1
-    BTFSS	PIR1, RCIF,0			; Copiem valor rebut de PC a PWMSERVO0
-    GOTO	WAIT_REP   
-RETURN   
+    BTG		TOCA0,0,0
+    
+RETURN     
+    
     
     
 LEDSRGB0					; Mirem 3 bits de mes pes de PWMSERVO0, per saber a quin "grau" es troba
@@ -382,6 +403,7 @@ SERV0ADD
 PRESERV0SUB    
     ; Si la operacio esta bloquejada, no la fem
 
+    
     BTFSS	    Lock,1,0
     CALL	    SERV0SUB
     
@@ -485,7 +507,7 @@ TIMER_RSI
     
     
     ESPERA1					; Bucle que fa 100 voltes i despres incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
-    MOVLW	.237				
+    MOVLW	.235				
     MOVWF	Count,0 
 	INCREMENTA              
     INCF	Count,1 
@@ -556,8 +578,8 @@ MODE0
     BCF		LATC,RC5,0			; Apago led0 si estava obert
     
     
-    BTFSS	PORTB,RB0,0			; Fem polling per saber quin boto esta apretat i aixi saber que cal modificar
-    CALL	PRESERV0ADD			; Les funcions pre-X serveixen per bloquejar el pas de 0 a 255 o a l'inreves
+    BTFSS	PORTB,RB0,0			; Fem polling per saber quin boto esta apretat i aix? saber que cal modificar
+    CALL	PRESERV0ADD
     
     BTFSS	PORTB,RB1,0
     CALL	PRESERV0SUB
