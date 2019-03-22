@@ -485,7 +485,7 @@ TIMER_RSI
     
     
     ESPERA1					; Bucle que fa 100 voltes i despres incrementa en 1 el valor de temps a comparar amb el que ha d'adquirir cada servo
-    MOVLW	.210				
+    MOVLW	.237				
     MOVWF	Count,0 
 	INCREMENTA              
     INCF	Count,1 
