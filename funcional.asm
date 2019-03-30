@@ -202,6 +202,15 @@ DeuSeg
     
     RETURN    
     
+MODE3SERVO
+    ;MOVFF	ADRESH,WREG
+    MOVLW b'00001000'
+    ADDWF ADRESH,0,0
+    MOVFF	WREG,LATD
+    
+    RETURN
+    
+    
     
 RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritura i !CSRam a 1 (desactivat)
 	; Primer ens caldra traduir de analogic a digital, i treure aquest valor per BDRam [0..7]
@@ -219,7 +228,7 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     BTFSS	Mode,0,0
     MOVLW	b'00000001'			; ADCON0 al canal AN0 i ADON activat
     BTFSC	Mode,0,0
-    MOVLW	b'00001001'			; ADCON0 al canal AN2 i ADON activat
+    MOVLW	b'00001101'			; ADCON0 al canal AN3 i ADON activat
     
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
@@ -229,6 +238,8 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     
     
     MOVFF	ADRESH,LATD			; Copiem els 8 bits de mes pes a el LATD
+    BTFSC	Mode,0,0
+    CALL	MODE3SERVO
     
     BCF		LATA,RA5,0			; R/!W RAM mode escritura
     BCF		LATA,RA4,0			; Activem !CSRam
@@ -248,7 +259,9 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     BTFSS	Mode,0,0
     MOVLW	b'00000101'			; ADCON0 al canal AN1 i ADON activat
     BTFSC	Mode,0,0
-    MOVLW	b'00001101'			; ADCON0 al canal AN3 i ADON activat
+    MOVLW	b'00001001'			; ADCON0 al canal AN2 i ADON activat
+    
+    
     
     MOVWF	ADCON0,0
     BSF		ADCON0,1,0
@@ -257,7 +270,9 @@ RECORD	; Inicialment tindrem BDRam configurat com sortida, R/!W en mode escritur
     GOTO	ESPEREM3
     
 
-    MOVFF	ADRESH,LATD			; Copiem els 8 bits de mes pes a el LATD	
+    MOVFF	ADRESH,LATD			; Copiem els 8 bits de mes pes a el LATD
+    BTFSC	Mode,0,0
+    CALL	MODE3SERVO
     
     BCF		LATA,RA5,0			; R/!W RAM mode escritura
     BCF		LATA,RA4,0			; Activem !CSRam
